@@ -1,14 +1,17 @@
 node {
    def commit_id
-   stage('step a') {
-     checkout scm
+   stage('GIT Checkout') {
+     checkout([$class: 'GitSCM', branches: [[name: '*/master']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/yanivomc/docker-cicd']]])
      sh "git rev-parse --short HEAD > .git/commit-id"                        
      commit_id = readFile('.git/commit-id').trim()
    }
    stage('test') {
      nodejs(nodeJSInstallationName: 'nodejs') {
-       sh 'npm install --only=dev'
-       sh 'npm test'
+       '''
+       cd basics
+       npm install --only=dev
+       npm test
+       '''
      }
    }
    stage('docker build/push') {
@@ -17,11 +20,10 @@ node {
      }
    }
    stage('docker run') {
-     sh label: '', script: '''docker rm docker_test
+     sh label: '', script: """docker rm docker_test
       docker run --rm -tid --name docker_test -p 3000 yanivomc/docker-nodejs-demo:latest
       docker kill docker_test
-      
-      '''
+      echo Commit ID: ${commit_id}
+      """
      }
    }
-
